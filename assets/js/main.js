@@ -30,6 +30,7 @@ let app = new Vue({
     drawRadius: [],
     drawZones: [],
     zoneData: [],
+    errMessage: "",
     zoneHandleClick: function () {},
   },
   methods: {
@@ -81,6 +82,12 @@ let app = new Vue({
       return Math.round(length * 100) / 100 + " " + "m";
     },
     async doSearch() {
+      this.errMessage = '';
+      if (!this.radiuses.length && !this.gids.length) {
+        this.errMessage = 'Chưa nhập giới hạn tìm kiếm!';
+        return;
+      }
+
       let data = await this.queryPoints(
         this.radiuses,
         this.gids,
@@ -152,6 +159,7 @@ let app = new Vue({
       this.drawZones = [];
       this.gids = [];
       this.zoneData = [];
+      this.errMessage = "";
       this.zoneHandleClick = function () {};
 
       let layerBackgroundMap = new ol.layer.Tile({

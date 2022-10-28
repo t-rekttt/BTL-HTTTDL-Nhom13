@@ -63,6 +63,13 @@ header("Pragma: no-cache");
                 </b>
               </div>
             </div>
+            <div class="row mt-3">
+              <div class="col text-danger" v-if="errMessage">
+                <b>
+                  Lỗi: {{ errMessage }}
+                </b>
+              </div>
+            </div>
             <div class="row mt-3" v-if="radiuses.length">
               <div class="col">
                 <div class="row">
