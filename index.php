@@ -58,7 +58,7 @@ header("Pragma: no-cache");
             </div>
             <div class="row mt-3">
               <div class="col" v-if="results">
-                Tìm thấy: {{ results.length }} kết quả
+                Tìm thấy {{ results.length }} kết quả
               </div>
             </div>
           </div>
