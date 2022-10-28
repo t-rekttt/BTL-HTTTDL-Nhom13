@@ -26,7 +26,7 @@ header("Pragma: no-cache");
       </div>
       <div class="col">
         <div class="row mt-3">
-          <div class="col-8 offset-2">
+          <div class="col-10 offset-1">
             <div class="row">
               <div class="col">
                 <div class="mb-3">
@@ -34,7 +34,7 @@ header("Pragma: no-cache");
                     Chọn giới hạn vùng tìm kiếm
                   </label>
                   <select class="form-select" v-model="limitType">
-                    <option value="point">Giới hạn bằng bán kính</option>
+                    <option value="point">Giới hạn bằng khoảng cách</option>
                     <option value="zone">Giới hạn bằng vùng</option>
                   </select>
                 </div>
@@ -51,14 +51,65 @@ header("Pragma: no-cache");
                     </option>
                   </select>
                 </div>
-    
+
                 <button class="btn btn-primary" @click.prevent='doSearch()'>Tìm kiếm</button>
                 <button class="btn btn-danger" @click.prevent='initMap()'>Đặt lại</button>
               </div>
             </div>
             <div class="row mt-3">
-              <div class="col" v-if="results">
-                Tìm thấy {{ results.length }} kết quả
+              <div class="col text-success" v-if="results">
+                <b>
+                  Tìm thấy {{ results.length }} kết quả
+                </b>
+              </div>
+            </div>
+            <div class="row mt-3" v-if="radiuses.length">
+              <div class="col">
+                <div class="row">
+                  <div class="col">
+                    <b>
+                      Các giới hạn khoảng cách hiện tại:
+                    </b>
+                  </div>
+                </div>
+                <div class="row mt-3">
+                  <div class="col">
+                    <table class="table table-striped table-bordered">
+                      <thead>
+                        <tr>
+                          <th scope="col">STT</th>
+                          <th scope="col">Toạ độ tâm</th>
+                          <th scope="col">Khoảng cách</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr v-for="(radius, i) in radiuses">
+                          <td scope="row">{{ i + 1 }}</td>
+                          <td>({{ radius.latlong[0] }}, {{ radius.latlong[1] }})</td>
+                          <td>{{ formatLength(radius.radius) }}</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="row mt-3" v-if="gids.length">
+              <div class="col">
+                <div class="row">
+                  <div class="col">
+                    <b>
+                      Các giới hạn vùng hiện tại:
+                    </b>
+                  </div>
+                </div>
+                <div class="row">
+                  <div class="ol">
+                    <li v-for="zone in zoneData">
+                      {{ zone.type_2 }} {{ zone.name_2 }}, {{ zone.name_1 }}
+                    </li>
+                  </div>
+                </div>
               </div>
             </div>
           </div>

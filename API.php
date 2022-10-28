@@ -83,7 +83,7 @@ function closeDB($paPDO)
 
 function queryPoints($paPDO, $radiuses, $gids, $poisType)
 {
-  $query = 'SELECT ST_AsGeoJson(geom) as geo FROM public.gis_osm_pois_free_1 WHERE ';
+  $query = 'SELECT ST_AsGeoJson(geom) as geo, name FROM public.gis_osm_pois_free_1 WHERE ';
   $dataArr = [];
   $and = false;
 
@@ -155,7 +155,7 @@ function getPointOfInterestTypes($paPDO)
 
 function queryZones($paPDO, $centerLat, $centerLong)
 {
-  $mySQLStatement = $paPDO->prepare('SELECT gid, ST_AsGeoJson(geom) as geo FROM public.gadm41_vnm_2 WHERE ST_Intersects(ST_MakePoint(:centerLat, :centerLong), geom)');
+  $mySQLStatement = $paPDO->prepare('SELECT name_1, type_2, name_2, gid, ST_AsGeoJson(geom) as geo FROM public.gadm41_vnm_2 WHERE ST_Intersects(ST_MakePoint(:centerLat, :centerLong), geom)');
   $mySQLStatement->execute(['centerLat' => $centerLat, 'centerLong' => $centerLong]);
 
   return json_encode(getResult($mySQLStatement));

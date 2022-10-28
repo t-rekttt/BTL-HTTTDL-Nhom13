@@ -29,6 +29,7 @@ let app = new Vue({
     results: null,
     drawRadius: [],
     drawZones: [],
+    zoneData: [],
     zoneHandleClick: function () {},
   },
   methods: {
@@ -72,6 +73,13 @@ let app = new Vue({
     formatPoisTypeName(name) {
       return this.capitalizeFirstLetter(name.replace("_", " "));
     },
+    formatLength(length) {
+      if (length > 100) {
+        return Math.round((length / 1000) * 100) / 100 + " " + "km";
+      }
+
+      return Math.round(length * 100) / 100 + " " + "m";
+    },
     async doSearch() {
       let data = await this.queryPoints(
         this.radiuses,
@@ -84,11 +92,25 @@ let app = new Vue({
       let markers = data.map((item) => {
         let geo = JSON.parse(item.geo);
 
-        return new ol.Feature({
+        const textStyle = new ol.style.Style({
+          text: new ol.style.Text({
+            text: item.name,
+            font: "5px Calibri,sans-serif",
+            fill: new ol.style.Fill({
+              color: "black",
+            }),
+          }),
+        });
+
+        let feature = new ol.Feature({
           geometry: new ol.geom.Point(
             ol.proj.transform(geo.coordinates, "EPSG:4326", "EPSG:3857")
           ),
         });
+
+        // feature.setStyle([textStyle]);
+
+        return feature;
       });
 
       var highlightZoneVectorSource = new ol.source.Vector({
@@ -129,6 +151,7 @@ let app = new Vue({
       this.drawRadius = [];
       this.drawZones = [];
       this.gids = [];
+      this.zoneData = [];
       this.zoneHandleClick = function () {};
 
       let layerBackgroundMap = new ol.layer.Tile({
@@ -181,24 +204,40 @@ let app = new Vue({
       layerGadm41_vnm_2.setZIndex(1);
       layerGadm41_vnm_2.setOpacity(0.5);
 
-      let layerGis_osm_pois_free_1 = new ol.layer.Image({
-        source: new ol.source.ImageWMS({
-          ratio: 1,
-          url: "http://localhost:8080/geoserver/wms?",
-          params: {
-            FORMAT: format,
-            VERSION: "1.1.1",
-            STYLES: "",
-            LAYERS: "project.cuoi.ki:gis_osm_pois_free_1",
-          },
-        }),
-      });
+      // let layerGis_osm_pois_free_1 = new ol.layer.Image({
+      //   source: new ol.source.ImageWMS({
+      //     ratio: 1,
+      //     url: "http://localhost:8080/geoserver/wms?",
+      //     params: {
+      //       FORMAT: format,
+      //       VERSION: "1.1.1",
+      //       STYLES: "",
+      //       LAYERS: "project.cuoi.ki:gis_osm_pois_free_1",
+      //     },
+      //   }),
+      // });
+
+      // let layerGis_osm_roads_free_1 = new ol.layer.Image({
+      //   source: new ol.source.ImageWMS({
+      //     ratio: 1,
+      //     url: "http://localhost:8080/geoserver/wms?",
+      //     params: {
+      //       FORMAT: format,
+      //       VERSION: "1.1.1",
+      //       STYLES: "",
+      //       LAYERS: "project.cuoi.ki:gis_osm_roads_free_1",
+      //     },
+      //   }),
+      // });
+      // layerGis_osm_roads_free_1.setZIndex(2);
+      // layerGadm41_vnm_2.setOpacity(0.5);
 
       const map = new ol.Map({
         target: "map",
         layers: [
           layerBackgroundMap,
           layerGadm41_vnm_2,
+          // layerGis_osm_roads_free_1,
           // layerGis_osm_pois_free_1,
           vectorLayerRadius,
           vectorLayerZone,
@@ -354,6 +393,7 @@ let app = new Vue({
           // console.log(data);
           for (let item of data) {
             this.gids.push(item.gid);
+            this.zoneData.push(item);
           }
 
           let markers = [];
@@ -466,7 +506,10 @@ let app = new Vue({
           let output = formatLength(line);
           // console.log(distance, output);
           measureTooltipElement.innerHTML = output;
-          this.radiuses.push({ latlong: ol.proj.transform(center, "EPSG:3857", "EPSG:4326"), radius: distance });
+          this.radiuses.push({
+            latlong: ol.proj.transform(center, "EPSG:3857", "EPSG:4326"),
+            radius: distance,
+          });
 
           // unset sketch
           sketch = null;
