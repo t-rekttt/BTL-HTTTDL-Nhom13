@@ -128,6 +128,7 @@ let app = new Vue({
       this.map = null;
       this.drawRadius = [];
       this.drawZones = [];
+      this.gids = [];
       this.zoneHandleClick = function () {};
 
       let layerBackgroundMap = new ol.layer.Tile({
