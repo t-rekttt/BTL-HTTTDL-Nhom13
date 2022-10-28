@@ -31,6 +31,8 @@ if (isset($_POST['function'])) {
     $result = queryPoints($paPDO, $centerLat, $centerLong, $radius, $gids, $poisType);
   } else if ($function == 'getPointOfInterestTypes') {
     $result = getPointOfInterestTypes($paPDO);
+  } else if ($function == 'queryZones') {
+    $result = queryZones($paPDO, $centerLat, $centerLong);
   }
 
   echo $result;
@@ -70,13 +72,7 @@ function query($paPDO, $paSQLStr)
 
 function getResult($myPreparedSQLStatement)
 {
-  $result = [];
-
-  foreach ($myPreparedSQLStatement as $row) {
-    array_push($result, $row);
-  }
-
-  return $result;
+  return $myPreparedSQLStatement->fetchAll();
 }
 
 function closeDB($paPDO)
@@ -91,8 +87,23 @@ function queryPoints($paPDO, $centerLat, $centerLong, $radius, $gids, $poisType)
   $dataArr = ['centerLat' => $centerLat, 'centerLong' => $centerLong, 'radius' => $radius];
 
   if ($gids) {
-    $query .= 'AND ST_Contains((SELECT ST_Union(geom) as union FROM public.gadm41_vnm_3 WHERE gid IN (:gids)), geom) ';
-    $dataArr = array_merge($dataArr, ['gids' => $gids]);
+    $gidsArr = explode(",", $gids);
+    $gidsArrMap = [];
+    $gidsQueryStr = "";
+
+    foreach ($gidsArr as $k => $v) {
+      $placeholder = ':gid' . strval($k);
+      $gidsQueryStr .= $placeholder;
+      $gidsArrMap = array_merge(
+        $gidsArrMap,
+        [$placeholder => $v]
+      );
+      if ($k < count($gidsArr) - 1)
+        $gidsQueryStr .= ',';
+    }
+
+    $query .= 'AND ST_Intersects((SELECT ST_Union(geom) FROM public.gadm41_vnm_2 WHERE gid IN (' . $gidsQueryStr . ')), geom) ';
+    $dataArr = array_merge($dataArr, $gidsArrMap);
   }
 
   if ($poisType) {
@@ -110,6 +121,14 @@ function getPointOfInterestTypes($paPDO)
 {
   $mySQLStatement = $paPDO->prepare('SELECT DISTINCT(fclass) FROM public.gis_osm_pois_free_1');
   $mySQLStatement->execute([]);
+
+  return json_encode(getResult($mySQLStatement));
+}
+
+function queryZones($paPDO, $centerLat, $centerLong)
+{
+  $mySQLStatement = $paPDO->prepare('SELECT gid, ST_AsGeoJson(geom) as geo FROM public.gadm41_vnm_2 WHERE ST_Intersects(ST_MakePoint(:centerLat, :centerLong), geom)');
+  $mySQLStatement->execute(['centerLat' => $centerLat, 'centerLong' => $centerLong]);
 
   return json_encode(getResult($mySQLStatement));
 }

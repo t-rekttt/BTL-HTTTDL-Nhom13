@@ -35,7 +35,7 @@ header("Pragma: no-cache");
                   </label>
                   <select class="form-select" v-model="limitType">
                     <option value="point">Giới hạn bằng bán kính</option>
-                    <option value="area">Giới hạn bằng vùng</option>
+                    <option value="zone">Giới hạn bằng vùng</option>
                   </select>
                 </div>
                 <div class="mb-3">
