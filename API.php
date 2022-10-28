@@ -8,7 +8,7 @@ if (isset($_POST['function'])) {
   $result = null;
   $centerLat = null;
   $centerLong = null;
-  $radius = null;
+  $radiuses = null;
   $gids = null;
   $poisType = null;
 
@@ -18,8 +18,8 @@ if (isset($_POST['function'])) {
   if (isset($_POST['centerLong']))
     $centerLong = $_POST['centerLong'];
 
-  if (isset($_POST['radius']))
-    $radius = $_POST['radius'];
+  if (isset($_POST['radiuses']))
+    $radiuses = json_decode($_POST['radiuses'], 1);
 
   if (isset($_POST['gids']))
     $gids = $_POST['gids'];
@@ -28,7 +28,7 @@ if (isset($_POST['function'])) {
     $poisType = $_POST['poisType'];
 
   if ($function == 'queryPoints') {
-    $result = queryPoints($paPDO, $centerLat, $centerLong, $radius, $gids, $poisType);
+    $result = queryPoints($paPDO, $radiuses, $gids, $poisType);
   } else if ($function == 'getPointOfInterestTypes') {
     $result = getPointOfInterestTypes($paPDO);
   } else if ($function == 'queryZones') {
@@ -81,10 +81,29 @@ function closeDB($paPDO)
   $paPDO = null;
 }
 
-function queryPoints($paPDO, $centerLat, $centerLong, $radius, $gids, $poisType)
+function queryPoints($paPDO, $radiuses, $gids, $poisType)
 {
-  $query = 'SELECT ST_AsGeoJson(geom) as geo FROM public.gis_osm_pois_free_1 WHERE ST_Distance(ST_MakePoint(:centerLat, :centerLong)::geography, geom::geography) <= :radius ';
-  $dataArr = ['centerLat' => $centerLat, 'centerLong' => $centerLong, 'radius' => $radius];
+  $query = 'SELECT ST_AsGeoJson(geom) as geo FROM public.gis_osm_pois_free_1 WHERE ';
+  $dataArr = [];
+  $and = false;
+
+  foreach ($radiuses as $k => $radius) {
+    // var_dump($radius);
+
+    $placeholderCenterLat = 'centerLat' . strval($k);
+    $placeholderCenterLong = 'centerLong' . strval($k);
+    $placeholderRadius = 'radius' . strval($k);
+
+    if ($and)
+      $query .= 'AND ';
+    $query .= 'ST_Distance(ST_MakePoint(:' . $placeholderCenterLat . ', :' . $placeholderCenterLong . ')::geography, geom::geography) <= :' . $placeholderRadius . ' ';
+    $dataArr = array_merge($dataArr, [
+      $placeholderCenterLat => $radius['latlong'][0],
+      $placeholderCenterLong => $radius['latlong'][1],
+      $placeholderRadius => $radius['radius']
+    ]);
+    $and = true;
+  }
 
   if ($gids) {
     $gidsArr = explode(",", $gids);
@@ -92,8 +111,8 @@ function queryPoints($paPDO, $centerLat, $centerLong, $radius, $gids, $poisType)
     $gidsQueryStr = "";
 
     foreach ($gidsArr as $k => $v) {
-      $placeholder = ':gid' . strval($k);
-      $gidsQueryStr .= $placeholder;
+      $placeholder = 'gid' . strval($k);
+      $gidsQueryStr .= ':' . $placeholder;
       $gidsArrMap = array_merge(
         $gidsArrMap,
         [$placeholder => $v]
@@ -102,14 +121,23 @@ function queryPoints($paPDO, $centerLat, $centerLong, $radius, $gids, $poisType)
         $gidsQueryStr .= ',';
     }
 
-    $query .= 'AND ST_Intersects((SELECT ST_Union(geom) FROM public.gadm41_vnm_2 WHERE gid IN (' . $gidsQueryStr . ')), geom) ';
+    if ($and)
+      $query .= 'AND ';
+    $query .= 'ST_Intersects((SELECT ST_Union(geom) FROM public.gadm41_vnm_2 WHERE gid IN (' . $gidsQueryStr . ')), geom) ';
     $dataArr = array_merge($dataArr, $gidsArrMap);
+    $and = true;
   }
 
   if ($poisType) {
-    $query .= 'AND fclass = :poisType ';
+    if ($and)
+      $query .= 'AND ';
+    $query .= 'fclass = :poisType ';
     $dataArr = array_merge($dataArr, ['poisType' => $poisType]);
+    $and = true;
   }
+
+  // var_dump($dataArr);
+  // var_dump($query);
 
   $mySQLStatement = $paPDO->prepare($query);
   $mySQLStatement->execute($dataArr);

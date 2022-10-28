@@ -20,8 +20,8 @@ let app = new Vue({
     poisType: "all",
     vectorSource: null,
     vectorSourceZone: null,
-    distance: null,
-    center: null,
+    radius: null,
+    radiuses: [],
     gids: [],
     map: null,
     searchResultLayer: null,
@@ -46,16 +46,14 @@ let app = new Vue({
         function: "getPointOfInterestTypes",
       });
     },
-    queryPoints(centerLat, centerLong, radius, gids, poisType) {
+    queryPoints(radiuses, gids, poisType) {
       this.removeResultLayer();
 
       let data = {
         function: "queryPoints",
       };
 
-      if (centerLat) data.centerLat = centerLat;
-      if (centerLong) data.centerLong = centerLong;
-      if (radius) data.radius = radius;
+      if (radiuses) data.radiuses = JSON.stringify(radiuses);
       if (gids && gids.length) data.gids = gids;
       if (poisType && poisType !== "all") data.poisType = poisType;
 
@@ -76,9 +74,7 @@ let app = new Vue({
     },
     async doSearch() {
       let data = await this.queryPoints(
-        this.center[0],
-        this.center[1],
-        this.distance,
+        this.radiuses,
         this.gids,
         this.poisType
       );
@@ -128,6 +124,7 @@ let app = new Vue({
       this.poisType = "all";
       this.limitType = "point";
       this.searchResultLayer = null;
+      this.radiuses = [];
       this.map = null;
       this.drawRadius = [];
       this.drawZones = [];
@@ -179,6 +176,9 @@ let app = new Vue({
           },
         }),
       });
+
+      layerGadm41_vnm_2.setZIndex(1);
+      layerGadm41_vnm_2.setOpacity(0.5);
 
       let layerGis_osm_pois_free_1 = new ol.layer.Image({
         source: new ol.source.ImageWMS({
@@ -384,7 +384,7 @@ let app = new Vue({
             );
           }
 
-          console.log(markers);
+          // console.log(markers);
 
           var styles = {
             MultiPolygon: new ol.style.Style({
@@ -434,28 +434,39 @@ let app = new Vue({
           let tooltipCoord = evt.coordinate;
 
           let coordinate = evt.feature.getGeometry().getCoordinates()[0];
-          let longlat = ol.proj.transform(coordinate, "EPSG:3857", "EPSG:4326");
-          this.center = longlat;
+          // console.log({ coordinate, longlat });
 
           listener = sketch.getGeometry().on("change", (evt) => {
             const geom = evt.target;
-            let output;
-            output = formatLength(geom);
-            this.distance = ol.sphere.getLength(geom);
+            // console.log({ length: ol.sphere.getLength(geom) });
+            let output = formatLength(geom);
             tooltipCoord = geom.getLastCoordinate();
             measureTooltipElement.innerHTML = output;
             measureTooltip.setPosition(tooltipCoord);
           });
         });
 
-        draw1.on("drawend", () => {
+        draw1.on("drawend", (evt) => {
           this.removeResultLayer();
 
-          $(".ol-tooltip-static").remove();
-          vectorSourceRadius.clear();
+          // $(".ol-tooltip-static").remove();
+          // vectorSourceRadius.clear();
 
           measureTooltipElement.className = "ol-tooltip ol-tooltip-static";
           measureTooltip.setOffset([0, -7]);
+          // this.radiuses.push({ longlat, radius: ol.sphere.getLength(geom) });
+
+          var line = new ol.geom.LineString(
+            evt.feature.getGeometry().getCoordinates()
+          );
+
+          let distance = ol.sphere.getLength(line);
+          let center = evt.feature.getGeometry().getCoordinates()[0];
+          let output = formatLength(line);
+          // console.log(distance, output);
+          measureTooltipElement.innerHTML = output;
+          this.radiuses.push({ latlong: ol.proj.transform(center, "EPSG:3857", "EPSG:4326"), radius: distance });
+
           // unset sketch
           sketch = null;
           // unset tooltip so that a new one can be created
