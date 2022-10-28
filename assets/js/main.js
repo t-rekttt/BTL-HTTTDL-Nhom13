@@ -82,55 +82,61 @@ let app = new Vue({
       return Math.round(length * 100) / 100 + " " + "m";
     },
     async doSearch() {
-      this.errMessage = '';
-      if (!this.radiuses.length && !this.gids.length) {
-        this.errMessage = 'Chưa nhập giới hạn tìm kiếm!';
-        return;
-      }
+      this.errMessage = "";
 
-      let data = await this.queryPoints(
-        this.radiuses,
-        this.gids,
-        this.poisType
-      );
+      try {
+        if (!this.radiuses.length && !this.gids.length) {
+          this.errMessage = "Chưa nhập giới hạn tìm kiếm!";
+          return;
+        }
 
-      this.results = data;
+        let data = await this.queryPoints(
+          this.radiuses,
+          this.gids,
+          this.poisType
+        );
 
-      let markers = data.map((item) => {
-        let geo = JSON.parse(item.geo);
+        this.results = data;
 
-        const textStyle = new ol.style.Style({
-          text: new ol.style.Text({
-            text: item.name,
-            font: "5px Calibri,sans-serif",
-            fill: new ol.style.Fill({
-              color: "black",
+        let markers = data.map((item) => {
+          let geo = JSON.parse(item.geo);
+
+          const textStyle = new ol.style.Style({
+            text: new ol.style.Text({
+              text: item.name,
+              font: "5px Calibri,sans-serif",
+              fill: new ol.style.Fill({
+                color: "black",
+              }),
             }),
-          }),
+          });
+
+          let feature = new ol.Feature({
+            geometry: new ol.geom.Point(
+              ol.proj.transform(geo.coordinates, "EPSG:4326", "EPSG:3857")
+            ),
+          });
+
+          // feature.setStyle([textStyle]);
+
+          return feature;
         });
 
-        let feature = new ol.Feature({
-          geometry: new ol.geom.Point(
-            ol.proj.transform(geo.coordinates, "EPSG:4326", "EPSG:3857")
-          ),
+        var highlightZoneVectorSource = new ol.source.Vector({
+          features: markers,
         });
 
-        // feature.setStyle([textStyle]);
+        var searchResultLayer = new ol.layer.Vector({
+          source: highlightZoneVectorSource,
+        });
+        searchResultLayer.setZIndex(10);
 
-        return feature;
-      });
-
-      var highlightZoneVectorSource = new ol.source.Vector({
-        features: markers,
-      });
-
-      var searchResultLayer = new ol.layer.Vector({
-        source: highlightZoneVectorSource,
-      });
-      searchResultLayer.setZIndex(10);
-
-      this.searchResultLayer = searchResultLayer;
-      this.map.addLayer(searchResultLayer);
+        this.searchResultLayer = searchResultLayer;
+        this.map.addLayer(searchResultLayer);
+      } catch (err) {
+        console.log(err);
+        this.errMessage = err.message;
+      }
     },
     serialize(obj) {
       var str = [];
