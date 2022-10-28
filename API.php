@@ -6,20 +6,31 @@ if (isset($_POST['function'])) {
 
   $function = $_POST['function'];
   $result = null;
+  $centerLat = null;
+  $centerLong = null;
+  $radius = null;
+  $gids = null;
+  $poisType = null;
 
-  if ($function == 'queryPointsInRadius') {
-    $x = $_POST['x'];
-    $y = $_POST['y'];
+  if (isset($_POST['centerLat']))
+    $centerLat = $_POST['centerLat'];
+
+  if (isset($_POST['centerLong']))
+    $centerLong = $_POST['centerLong'];
+
+  if (isset($_POST['radius']))
     $radius = $_POST['radius'];
 
-    $result = queryPointsInRadius($paPDO, $x, $y, $radius);
-  } else if ($function == 'queryPointsInRadiusAndAreas') {
-    $x = $_POST['x'];
-    $y = $_POST['y'];
-    $radius = $_POST['radius'];
+  if (isset($_POST['gids']))
     $gids = $_POST['gids'];
 
-    $result = queryPointsInRadiusAndAreas($paPDO, $x, $y, $radius, $gids);
+  if (isset($_POST['poisType']))
+    $poisType = $_POST['poisType'];
+
+  if ($function == 'queryPoints') {
+    $result = queryPoints($paPDO, $centerLat, $centerLong, $radius, $gids, $poisType);
+  } else if ($function == 'getPointOfInterestTypes') {
+    $result = getPointOfInterestTypes($paPDO);
   }
 
   echo $result;
@@ -57,7 +68,8 @@ function query($paPDO, $paSQLStr)
   }
 }
 
-function getResult($myPreparedSQLStatement) {
+function getResult($myPreparedSQLStatement)
+{
   $result = [];
 
   foreach ($myPreparedSQLStatement as $row) {
@@ -73,17 +85,31 @@ function closeDB($paPDO)
   $paPDO = null;
 }
 
-function queryPointsInRadius($paPDO, $x, $y, $radius) {
-  $mySQLStatement = $paPDO->prepare('SELECT * FROM public.gis_osm_pois_free_1 WHERE ST_Distance(ST_MakePoint(:x, :y)::geography, geom::geography) <= :radius');
-  $mySQLStatement->execute(['x' => $x, 'y' => $y, 'radius'=> $radius]);
+function queryPoints($paPDO, $centerLat, $centerLong, $radius, $gids, $poisType)
+{
+  $query = 'SELECT ST_AsGeoJson(geom) as geo FROM public.gis_osm_pois_free_1 WHERE ST_Distance(ST_MakePoint(:centerLat, :centerLong)::geography, geom::geography) <= :radius ';
+  $dataArr = ['centerLat' => $centerLat, 'centerLong' => $centerLong, 'radius' => $radius];
+
+  if ($gids) {
+    $query .= 'AND ST_Contains((SELECT ST_Union(geom) as union FROM public.gadm41_vnm_3 WHERE gid IN (:gids)), geom) ';
+    $dataArr = array_merge($dataArr, ['gids' => $gids]);
+  }
+
+  if ($poisType) {
+    $query .= 'AND fclass = :poisType ';
+    $dataArr = array_merge($dataArr, ['poisType' => $poisType]);
+  }
+
+  $mySQLStatement = $paPDO->prepare($query);
+  $mySQLStatement->execute($dataArr);
 
   return json_encode(getResult($mySQLStatement));
 }
 
-function queryPointsInRadiusAndAreas($paPDO, $x, $y, $radius, $gids)
+function getPointOfInterestTypes($paPDO)
 {
-  $mySQLStatement = $paPDO->prepare('SELECT * FROM public.gis_osm_pois_free_1 WHERE ST_Distance(ST_MakePoint(:x, :y)::geography, geom::geography) <= :radius AND ST_Contains((SELECT ST_Union(geom) as union FROM public.gadm41_vnm_3 WHERE gid IN (:gids)), geom)');
-  $mySQLStatement->execute(['x' => $x, 'y' => $y, 'radius' => $radius, 'gids' => $gids]);
+  $mySQLStatement = $paPDO->prepare('SELECT DISTINCT(fclass) FROM public.gis_osm_pois_free_1');
+  $mySQLStatement->execute([]);
 
   return json_encode(getResult($mySQLStatement));
 }
