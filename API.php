@@ -43,7 +43,7 @@ if (isset($_POST['function'])) {
 function initDB()
 {
   // Kết nối CSDL
-  $paPDO = new PDO('pgsql:host=localhost;dbname=ProjectCuoiKi;port=5432', 'postgres', PASSWORD);
+  $paPDO = new PDO('pgsql:host=localhost;dbname='.TABLENAME.';port=5432', 'postgres', PASSWORD);
   return $paPDO;
 }
 
@@ -155,7 +155,7 @@ function getPointOfInterestTypes($paPDO)
 
 function queryZones($paPDO, $centerLat, $centerLong)
 {
-  $mySQLStatement = $paPDO->prepare('SELECT name_1, type_2, name_2, gid, ST_AsGeoJson(geom) as geo FROM public.gadm41_vnm_2 WHERE ST_Intersects(ST_MakePoint(:centerLat, :centerLong), geom)');
+  $mySQLStatement = $paPDO->prepare('SELECT name_1, type_2, name_2, gid, ST_AsGeoJson(geom) as geo FROM public.gadm41_vnm_2 WHERE ST_Intersects(ST_SetSRID(ST_MakePoint(:centerLat, :centerLong), 4326), geom)');
   $mySQLStatement->execute(['centerLat' => $centerLat, 'centerLong' => $centerLong]);
 
   return json_encode(getResult($mySQLStatement));

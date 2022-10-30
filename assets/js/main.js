@@ -1,16 +1,33 @@
-const API = "http://localhost/BTL/API.php";
+const API = "API.php";
 
 const format = "image/png";
 
-let minX = 99.28821563720703;
-let minY = 7.891197681427002;
-let maxX = 114.35734558105469;
-let maxY = 23.371946334838867;
-let cenX = (minX + maxX) / 2;
-let cenY = (minY + maxY) / 2;
-let mapLat = cenY;
-let mapLng = cenX;
-let mapDefaultZoom = 6;
+// let minX = 99.28821563720703;
+// let minY = 7.891197681427002;
+// let maxX = 105.82635310292142;
+// let maxY = 21.006057858375527;
+// let cenX = (minX + maxX) / 2;
+// let cenY = (minY + maxY) / 2;
+
+// Thuy loi University location
+let dhtlX = 105.82635310292142;
+let dhtlY = 21.006057858375527;
+let mapLat = dhtlY;
+let mapLng = dhtlX;
+let mapDefaultZoom = 17;
+
+
+// Current location
+var currentX;
+var currentY;
+var isLocatePermission = false;
+
+
+// Check if drawed a circle
+var isDrawed = false;
+
+// Highlight layer
+var highlightZoneLayer;
 
 let app = new Vue({
   el: "#main",
@@ -31,7 +48,7 @@ let app = new Vue({
     drawZones: [],
     zoneData: [],
     errMessage: "",
-    zoneHandleClick: function () {},
+    zoneHandleClick: function () { },
   },
   methods: {
     post(data) {
@@ -83,6 +100,7 @@ let app = new Vue({
     },
     async doSearch() {
       this.errMessage = "";
+      isDrawed = true;
 
       try {
         if (!this.radiuses.length && !this.gids.length) {
@@ -152,8 +170,9 @@ let app = new Vue({
         this.searchResultLayer = null;
       }
     },
-    removeResultZoneLayer() {},
+    removeResultZoneLayer() { },
     initMap() {
+      isDrawed = false;
       document.querySelector("#map").innerHTML = "";
       this.results = null;
       this.poisType = "all";
@@ -166,7 +185,7 @@ let app = new Vue({
       this.gids = [];
       this.zoneData = [];
       this.errMessage = "";
-      this.zoneHandleClick = function () {};
+      this.zoneHandleClick = function () { };
 
       let layerBackgroundMap = new ol.layer.Tile({
         source: new ol.source.OSM(),
@@ -246,6 +265,11 @@ let app = new Vue({
       // layerGis_osm_roads_free_1.setZIndex(2);
       // layerGadm41_vnm_2.setOpacity(0.5);
 
+      const view = new ol.View({
+        center: ol.proj.fromLonLat([mapLng, mapLat]),
+        zoom: mapDefaultZoom,
+      })
+
       const map = new ol.Map({
         target: "map",
         layers: [
@@ -256,13 +280,36 @@ let app = new Vue({
           vectorLayerRadius,
           vectorLayerZone,
         ],
-        view: new ol.View({
-          center: ol.proj.fromLonLat([mapLng, mapLat]),
-          zoom: mapDefaultZoom,
-        }),
+        view: view,
       });
 
       this.map = map;
+
+      // Add current locate to layer
+      if (isLocatePermission) {
+        const positionFeature = new ol.Feature({
+          geometry: new ol.geom.Point(
+            ol.proj.transform([mapLng, mapLat], "EPSG:4326", "EPSG:3857")
+          ),
+        });
+        positionFeature.setStyle(
+          new ol.style.Style({
+            image: new ol.style.Icon({
+              anchor: [0.5, 46],
+              anchorXUnits: 'fraction',
+              anchorYUnits: 'pixels',
+              src: "assets/icon/home_pin_FILL0_wght400_GRAD0_opsz48.png",
+            }),
+          })
+        );
+
+        new ol.layer.Vector({
+          map: map,
+          source: new ol.source.Vector({
+            features: [positionFeature],
+          }),
+        });
+      }
 
       function highLightGeoJsonObj(coordinate) {
         let iconFeature = new ol.Feature({
@@ -283,7 +330,7 @@ let app = new Vue({
 
         iconFeature.setStyle(iconStyle);
         let vectorSource = new ol.source.Vector({
-          features: [iconFeature],
+          features: [iconFeature, accuracyFeature, positionFeature],
         });
         let vectorLayer = new ol.layer.Vector({
           source: vectorSource,
@@ -365,6 +412,7 @@ let app = new Vue({
 
       addInteraction = () => {
         let geometryFunction;
+        const zonesLayers = [];
 
         let draw = new ol.interaction.Draw({
           source: vectorSourceRadius,
@@ -398,6 +446,12 @@ let app = new Vue({
         });
 
         let zoneHandleClick = async (evt) => {
+          if (isDrawed) {
+            return;
+          }
+
+          map.removeLayer(highlightZoneLayer);
+
           var lonlat = ol.proj.transform(
             evt.coordinate,
             "EPSG:3857",
@@ -405,6 +459,8 @@ let app = new Vue({
           );
           let data = await this.queryZones(lonlat[0], lonlat[1]);
           // console.log(data);
+          this.gids = [];
+          this.zoneData = [];
           for (let item of data) {
             this.gids.push(item.gid);
             this.zoneData.push(item);
@@ -444,11 +500,11 @@ let app = new Vue({
           var styles = {
             MultiPolygon: new ol.style.Style({
               fill: new ol.style.Fill({
-                color: "orange",
+                color: "rgba(255, 255, 255, 0.4)",
               }),
               stroke: new ol.style.Stroke({
-                color: "yellow",
-                width: 2,
+                color: "red",
+                width: 5,
               }),
             }),
           };
@@ -460,15 +516,16 @@ let app = new Vue({
             features: markers,
           });
 
-          var highlightZoneLayer = new ol.layer.Vector({
+          highlightZoneLayer = new ol.layer.Vector({
             style: styleFunction,
             source: highlightZoneVectorSource,
           });
           highlightZoneLayer.setZIndex(8);
 
-          this.highlightZoneLayer = highlightZoneLayer;
+          // this.highlightZoneLayer = highlightZoneLayer;
           this.map.addLayer(highlightZoneLayer);
         };
+
         this.zoneHandleClick = zoneHandleClick;
 
         map.addInteraction(draw);
@@ -498,6 +555,7 @@ let app = new Vue({
             tooltipCoord = geom.getLastCoordinate();
             measureTooltipElement.innerHTML = output;
             measureTooltip.setPosition(tooltipCoord);
+            isDrawed = false;
           });
         });
 
@@ -531,7 +589,16 @@ let app = new Vue({
           measureTooltipElement = null;
           createMeasureTooltip();
           ol.Observable.unByKey(listener);
+          map.removeInteraction(draw1);
         });
+
+        draw.on(
+          "drawend",
+          function (evt) {
+            map.removeInteraction(draw);
+          },
+          this
+        );
       };
 
       /**
@@ -571,14 +638,60 @@ let app = new Vue({
       }
 
       addInteraction();
+
+      var roundResult;
+
+      map.on("singleclick", function (evt) {
+        if (isDrawed) {
+          map.removeLayer(roundResult);
+          const selectedX = ol.proj.transform(evt.coordinate, "EPSG:3857", "EPSG:4326")[0];
+          const selectedY = ol.proj.transform(evt.coordinate, "EPSG:3857", "EPSG:4326")[1];
+          var params = {
+            LAYERS: 'hanoi_round',
+            FORMAT: 'image/png'
+          };
+          var viewparams = [
+            'x1:' + mapLng, 'y1:' + mapLat,
+            'x2:' + selectedX, 'y2:' + selectedY
+          ];
+          params.viewparams = viewparams.join(';');
+          roundResult = new ol.layer.Image({
+            source: new ol.source.ImageWMS({
+              url: 'http://localhost:8080/geoserver/demo/wms',
+              params: params
+            })
+          });
+
+          map.addLayer(roundResult);
+          console.log(ol.proj.transform(evt.coordinate, "EPSG:3857", "EPSG:4326")[0]);
+          console.log(ol.proj.transform(evt.coordinate, "EPSG:3857", "EPSG:4326")[1]);
+        }
+      });
+
     },
   },
   mounted() {
-    console.log("Mounted");
-    this.initMap();
+    /**
+     *  Check location permission
+     *  Initial map with isLocatePermission = true if permission is allowed
+     *  false if permission is denied
+     */
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        mapLat = pos.coords.latitude;
+        mapLng = pos.coords.longitude;
+        isLocatePermission = true
+        this.initMap();
+      },
+      () => {
+        isLocatePermission = false
+        this.initMap();
+      }
+    );
     this.getPointOfInterestTypes().then((getPointOfInterestTypes) => {
       this.poisTypes = getPointOfInterestTypes.map((item) => item.fclass);
     });
+    console.log("Mounted");
   },
   watch: {
     limitType(val) {
