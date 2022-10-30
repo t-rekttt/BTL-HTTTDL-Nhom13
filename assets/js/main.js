@@ -1,16 +1,28 @@
-const API = "http://localhost/BTL/API.php";
+const API = "API.php";
 
 const format = "image/png";
 
-let minX = 99.28821563720703;
-let minY = 7.891197681427002;
-let maxX = 114.35734558105469;
-let maxY = 23.371946334838867;
-let cenX = (minX + maxX) / 2;
-let cenY = (minY + maxY) / 2;
+// let minX = 99.28821563720703;
+// let minY = 7.891197681427002;
+// let maxX = 105.82635310292142;
+// let maxY = 21.006057858375527;
+// let cenX = (minX + maxX) / 2;
+// let cenY = (minY + maxY) / 2;
+
+// Thuy loi University location
+let dhtlX = 105.82635310292142;
+let dhtlY = 21.006057858375527;
+let cenX = dhtlX
+let cenY = dhtlY
 let mapLat = cenY;
 let mapLng = cenX;
-let mapDefaultZoom = 6;
+let mapDefaultZoom = 17;
+
+
+// Current location
+var currentX;
+var currentY;
+var isLocatePermission = false;
 
 let app = new Vue({
   el: "#main",
@@ -31,7 +43,7 @@ let app = new Vue({
     drawZones: [],
     zoneData: [],
     errMessage: "",
-    zoneHandleClick: function () {},
+    zoneHandleClick: function () { },
   },
   methods: {
     post(data) {
@@ -116,9 +128,6 @@ let app = new Vue({
               ol.proj.transform(geo.coordinates, "EPSG:4326", "EPSG:3857")
             ),
           });
-
-          // feature.setStyle([textStyle]);
-
           return feature;
         });
 
@@ -152,7 +161,7 @@ let app = new Vue({
         this.searchResultLayer = null;
       }
     },
-    removeResultZoneLayer() {},
+    removeResultZoneLayer() { },
     initMap() {
       document.querySelector("#map").innerHTML = "";
       this.results = null;
@@ -166,7 +175,7 @@ let app = new Vue({
       this.gids = [];
       this.zoneData = [];
       this.errMessage = "";
-      this.zoneHandleClick = function () {};
+      this.zoneHandleClick = function () { };
 
       let layerBackgroundMap = new ol.layer.Tile({
         source: new ol.source.OSM(),
@@ -178,13 +187,6 @@ let app = new Vue({
 
       const vectorLayerRadius = new ol.layer.Vector({
         source: vectorSourceRadius,
-        // style: {
-        //   "fill-color": "rgba(255, 255, 255, 0.2)",
-        //   "stroke-color": "#ffcc33",
-        //   "stroke-width": 2,
-        //   "circle-radius": 7,
-        //   "circle-fill-color": "#ffcc33",
-        // },
       });
       vectorLayerRadius.setZIndex(9);
 
@@ -218,51 +220,49 @@ let app = new Vue({
       layerGadm41_vnm_2.setZIndex(1);
       layerGadm41_vnm_2.setOpacity(0.5);
 
-      // let layerGis_osm_pois_free_1 = new ol.layer.Image({
-      //   source: new ol.source.ImageWMS({
-      //     ratio: 1,
-      //     url: "http://localhost:8080/geoserver/wms?",
-      //     params: {
-      //       FORMAT: format,
-      //       VERSION: "1.1.1",
-      //       STYLES: "",
-      //       LAYERS: "project.cuoi.ki:gis_osm_pois_free_1",
-      //     },
-      //   }),
-      // });
-
-      // let layerGis_osm_roads_free_1 = new ol.layer.Image({
-      //   source: new ol.source.ImageWMS({
-      //     ratio: 1,
-      //     url: "http://localhost:8080/geoserver/wms?",
-      //     params: {
-      //       FORMAT: format,
-      //       VERSION: "1.1.1",
-      //       STYLES: "",
-      //       LAYERS: "project.cuoi.ki:gis_osm_roads_free_1",
-      //     },
-      //   }),
-      // });
-      // layerGis_osm_roads_free_1.setZIndex(2);
-      // layerGadm41_vnm_2.setOpacity(0.5);
+      const view = new ol.View({
+        center: ol.proj.fromLonLat([mapLng, mapLat]),
+        zoom: mapDefaultZoom,
+      })
 
       const map = new ol.Map({
         target: "map",
         layers: [
           layerBackgroundMap,
           layerGadm41_vnm_2,
-          // layerGis_osm_roads_free_1,
-          // layerGis_osm_pois_free_1,
           vectorLayerRadius,
           vectorLayerZone,
         ],
-        view: new ol.View({
-          center: ol.proj.fromLonLat([mapLng, mapLat]),
-          zoom: mapDefaultZoom,
-        }),
+        view: view,
       });
 
       this.map = map;
+
+      // Add current locate to layer
+      if (isLocatePermission) {
+        const positionFeature = new ol.Feature({
+          geometry: new ol.geom.Point(
+            ol.proj.transform([mapLng, mapLat], "EPSG:4326", "EPSG:3857")
+          ),
+        });
+        positionFeature.setStyle(
+          new ol.style.Style({
+            image: new ol.style.Icon({
+              anchor: [0.5, 46],
+              anchorXUnits: 'fraction',
+              anchorYUnits: 'pixels',
+              src: "assets/icon/home_pin_FILL0_wght400_GRAD0_opsz48.png",
+            }),
+          })
+        );
+
+        new ol.layer.Vector({
+          map: map,
+          source: new ol.source.Vector({
+            features: [positionFeature],
+          }),
+        });
+      }
 
       function highLightGeoJsonObj(coordinate) {
         let iconFeature = new ol.Feature({
@@ -283,7 +283,7 @@ let app = new Vue({
 
         iconFeature.setStyle(iconStyle);
         let vectorSource = new ol.source.Vector({
-          features: [iconFeature],
+          features: [iconFeature, accuracyFeature, positionFeature],
         });
         let vectorLayer = new ol.layer.Vector({
           source: vectorSource,
@@ -292,29 +292,11 @@ let app = new Vue({
       }
 
       highLightObj = (result) => {
-        //alert("result: " + result);
         var strObjJson = createJsonObj(result);
-        //alert(strObjJson);
         var objJson = JSON.parse(strObjJson);
-        //alert(JSON.stringify(objJson));
-        // drawGeoJsonObj(objJson);
         highLightGeoJsonObj(objJson);
       };
-      // map.on("singleclick", function (evt) {
-      //   //alert("coordinate: " + evt.coordinate);
-      //   //var myPoint = 'POINT(12,5)';
-      //   var lonlat = ol.proj.transform(evt.coordinate, "EPSG:3857", "EPSG:4326");
-      //   var lon = lonlat[0];
-      //   var lat = lonlat[1];
 
-      //   if (!drawingCircle) {
-      //     highLightGeoJsonObj(evt.coordinate);
-      //   }
-
-      //   drawingCircle = !drawingCircle;
-      // });
-
-      // const typeSelect = document.getElementById("type");
       const typeSelect = "Circle";
 
       /**
@@ -404,15 +386,12 @@ let app = new Vue({
             "EPSG:4326"
           );
           let data = await this.queryZones(lonlat[0], lonlat[1]);
-          // console.log(data);
           for (let item of data) {
             this.gids.push(item.gid);
             this.zoneData.push(item);
           }
 
           let markers = [];
-
-          // console.log(data);
           for (let item of data) {
             let geo = JSON.parse(item.geo);
 
@@ -422,8 +401,6 @@ let app = new Vue({
                   geo.coordinates.map((polygon) => {
                     return new ol.geom.Polygon(
                       polygon.map((coors) => {
-                        // console.log(coors);
-
                         return coors.map((coor) => {
                           return ol.proj.transform(
                             coor,
@@ -438,9 +415,6 @@ let app = new Vue({
               )
             );
           }
-
-          // console.log(markers);
-
           var styles = {
             MultiPolygon: new ol.style.Style({
               fill: new ol.style.Fill({
@@ -453,7 +427,6 @@ let app = new Vue({
             }),
           };
           var styleFunction = function (feature) {
-            // alert("style");
             return styles[feature.getGeometry().getType()];
           };
           var highlightZoneVectorSource = new ol.source.Vector({
@@ -489,11 +462,9 @@ let app = new Vue({
           let tooltipCoord = evt.coordinate;
 
           let coordinate = evt.feature.getGeometry().getCoordinates()[0];
-          // console.log({ coordinate, longlat });
 
           listener = sketch.getGeometry().on("change", (evt) => {
             const geom = evt.target;
-            // console.log({ length: ol.sphere.getLength(geom) });
             let output = formatLength(geom);
             tooltipCoord = geom.getLastCoordinate();
             measureTooltipElement.innerHTML = output;
@@ -518,7 +489,6 @@ let app = new Vue({
           let distance = ol.sphere.getLength(line);
           let center = evt.feature.getGeometry().getCoordinates()[0];
           let output = formatLength(line);
-          // console.log(distance, output);
           measureTooltipElement.innerHTML = output;
           this.radiuses.push({
             latlong: ol.proj.transform(center, "EPSG:3857", "EPSG:4326"),
@@ -574,11 +544,27 @@ let app = new Vue({
     },
   },
   mounted() {
-    console.log("Mounted");
-    this.initMap();
+    /**
+     *  Check location permission
+     *  Initial map with isLocatePermission = true if permission is allowed
+     *  false if permission is denied
+     */
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        mapLat = pos.coords.latitude;
+        mapLng = pos.coords.longitude;
+        isLocatePermission = true
+        this.initMap();
+      },
+      () => {
+        isLocatePermission = false
+        this.initMap();
+      }
+    );
     this.getPointOfInterestTypes().then((getPointOfInterestTypes) => {
       this.poisTypes = getPointOfInterestTypes.map((item) => item.fclass);
     });
+    console.log("Mounted");
   },
   watch: {
     limitType(val) {
