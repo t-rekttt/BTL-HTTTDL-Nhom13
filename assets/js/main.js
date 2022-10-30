@@ -1,16 +1,28 @@
-const API = "http://localhost/BTL/API.php";
+const API = "API.php";
 
 const format = "image/png";
 
-let minX = 99.28821563720703;
-let minY = 7.891197681427002;
-let maxX = 114.35734558105469;
-let maxY = 23.371946334838867;
-let cenX = (minX + maxX) / 2;
-let cenY = (minY + maxY) / 2;
+// let minX = 99.28821563720703;
+// let minY = 7.891197681427002;
+// let maxX = 105.82635310292142;
+// let maxY = 21.006057858375527;
+// let cenX = (minX + maxX) / 2;
+// let cenY = (minY + maxY) / 2;
+
+// Thuy loi University location
+let dhtlX = 105.82635310292142;
+let dhtlY = 21.006057858375527;
+let cenX = dhtlX
+let cenY = dhtlY
 let mapLat = cenY;
 let mapLng = cenX;
-let mapDefaultZoom = 6;
+let mapDefaultZoom = 17;
+
+
+// Current location
+var currentX;
+var currentY;
+var isLocatePermission = false;
 
 let app = new Vue({
   el: "#main",
@@ -31,7 +43,7 @@ let app = new Vue({
     drawZones: [],
     zoneData: [],
     errMessage: "",
-    zoneHandleClick: function () {},
+    zoneHandleClick: function () { },
   },
   methods: {
     post(data) {
@@ -152,7 +164,7 @@ let app = new Vue({
         this.searchResultLayer = null;
       }
     },
-    removeResultZoneLayer() {},
+    removeResultZoneLayer() { },
     initMap() {
       document.querySelector("#map").innerHTML = "";
       this.results = null;
@@ -166,7 +178,7 @@ let app = new Vue({
       this.gids = [];
       this.zoneData = [];
       this.errMessage = "";
-      this.zoneHandleClick = function () {};
+      this.zoneHandleClick = function () { };
 
       let layerBackgroundMap = new ol.layer.Tile({
         source: new ol.source.OSM(),
@@ -246,6 +258,11 @@ let app = new Vue({
       // layerGis_osm_roads_free_1.setZIndex(2);
       // layerGadm41_vnm_2.setOpacity(0.5);
 
+      const view = new ol.View({
+        center: ol.proj.fromLonLat([mapLng, mapLat]),
+        zoom: mapDefaultZoom,
+      })
+
       const map = new ol.Map({
         target: "map",
         layers: [
@@ -256,13 +273,36 @@ let app = new Vue({
           vectorLayerRadius,
           vectorLayerZone,
         ],
-        view: new ol.View({
-          center: ol.proj.fromLonLat([mapLng, mapLat]),
-          zoom: mapDefaultZoom,
-        }),
+        view: view,
       });
 
       this.map = map;
+
+      // Add current locate to layer
+      if (isLocatePermission) {
+        const positionFeature = new ol.Feature({
+          geometry: new ol.geom.Point(
+            ol.proj.transform([mapLng, mapLat], "EPSG:4326", "EPSG:3857")
+          ),
+        });
+        positionFeature.setStyle(
+          new ol.style.Style({
+            image: new ol.style.Icon({
+              anchor: [0.5, 46],
+              anchorXUnits: 'fraction',
+              anchorYUnits: 'pixels',
+              src: "assets/icon/home_pin_FILL0_wght400_GRAD0_opsz48.png",
+            }),
+          })
+        );
+
+        new ol.layer.Vector({
+          map: map,
+          source: new ol.source.Vector({
+            features: [positionFeature],
+          }),
+        });
+      }
 
       function highLightGeoJsonObj(coordinate) {
         let iconFeature = new ol.Feature({
@@ -283,7 +323,7 @@ let app = new Vue({
 
         iconFeature.setStyle(iconStyle);
         let vectorSource = new ol.source.Vector({
-          features: [iconFeature],
+          features: [iconFeature, accuracyFeature, positionFeature],
         });
         let vectorLayer = new ol.layer.Vector({
           source: vectorSource,
@@ -574,11 +614,27 @@ let app = new Vue({
     },
   },
   mounted() {
-    console.log("Mounted");
-    this.initMap();
+    /**
+     *  Check location permission
+     *  Initial map with isLocatePermission = true if permission is allowed
+     *  false if permission is denied
+     */
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        mapLat = pos.coords.latitude;
+        mapLng = pos.coords.longitude;
+        isLocatePermission = true
+        this.initMap();
+      },
+      () => {
+        isLocatePermission = false
+        this.initMap();
+      }
+    );
     this.getPointOfInterestTypes().then((getPointOfInterestTypes) => {
       this.poisTypes = getPointOfInterestTypes.map((item) => item.fclass);
     });
+    console.log("Mounted");
   },
   watch: {
     limitType(val) {
