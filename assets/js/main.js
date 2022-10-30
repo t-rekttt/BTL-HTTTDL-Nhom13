@@ -16,15 +16,10 @@ let mapLat = dhtlY;
 let mapLng = dhtlX;
 let mapDefaultZoom = 17;
 
-
 // Current location
 var currentX;
 var currentY;
 var isLocatePermission = false;
-
-
-// Check if drawed a circle
-var isDrawed = false;
 
 // Highlight layer
 var highlightZoneLayer;
@@ -48,7 +43,7 @@ let app = new Vue({
     drawZones: [],
     zoneData: [],
     errMessage: "",
-    zoneHandleClick: function () { },
+    zoneHandleClick: function () {},
   },
   methods: {
     post(data) {
@@ -100,7 +95,6 @@ let app = new Vue({
     },
     async doSearch() {
       this.errMessage = "";
-      isDrawed = true;
 
       try {
         if (!this.radiuses.length && !this.gids.length) {
@@ -170,9 +164,8 @@ let app = new Vue({
         this.searchResultLayer = null;
       }
     },
-    removeResultZoneLayer() { },
+    removeResultZoneLayer() {},
     initMap() {
-      isDrawed = false;
       document.querySelector("#map").innerHTML = "";
       this.results = null;
       this.poisType = "all";
@@ -185,7 +178,7 @@ let app = new Vue({
       this.gids = [];
       this.zoneData = [];
       this.errMessage = "";
-      this.zoneHandleClick = function () { };
+      this.zoneHandleClick = function () {};
 
       let layerBackgroundMap = new ol.layer.Tile({
         source: new ol.source.OSM(),
@@ -268,7 +261,7 @@ let app = new Vue({
       const view = new ol.View({
         center: ol.proj.fromLonLat([mapLng, mapLat]),
         zoom: mapDefaultZoom,
-      })
+      });
 
       const map = new ol.Map({
         target: "map",
@@ -292,12 +285,13 @@ let app = new Vue({
             ol.proj.transform([mapLng, mapLat], "EPSG:4326", "EPSG:3857")
           ),
         });
+
         positionFeature.setStyle(
           new ol.style.Style({
             image: new ol.style.Icon({
               anchor: [0.5, 46],
-              anchorXUnits: 'fraction',
-              anchorYUnits: 'pixels',
+              anchorXUnits: "fraction",
+              anchorYUnits: "pixels",
               src: "assets/icon/home_pin_FILL0_wght400_GRAD0_opsz48.png",
             }),
           })
@@ -446,12 +440,6 @@ let app = new Vue({
         });
 
         let zoneHandleClick = async (evt) => {
-          if (isDrawed) {
-            return;
-          }
-
-          map.removeLayer(highlightZoneLayer);
-
           var lonlat = ol.proj.transform(
             evt.coordinate,
             "EPSG:3857",
@@ -459,8 +447,6 @@ let app = new Vue({
           );
           let data = await this.queryZones(lonlat[0], lonlat[1]);
           // console.log(data);
-          this.gids = [];
-          this.zoneData = [];
           for (let item of data) {
             this.gids.push(item.gid);
             this.zoneData.push(item);
@@ -555,7 +541,6 @@ let app = new Vue({
             tooltipCoord = geom.getLastCoordinate();
             measureTooltipElement.innerHTML = output;
             measureTooltip.setPosition(tooltipCoord);
-            isDrawed = false;
           });
         });
 
@@ -567,7 +552,6 @@ let app = new Vue({
 
           measureTooltipElement.className = "ol-tooltip ol-tooltip-static";
           measureTooltip.setOffset([0, -7]);
-          // this.radiuses.push({ longlat, radius: ol.sphere.getLength(geom) });
 
           var line = new ol.geom.LineString(
             evt.feature.getGeometry().getCoordinates()
@@ -589,16 +573,7 @@ let app = new Vue({
           measureTooltipElement = null;
           createMeasureTooltip();
           ol.Observable.unByKey(listener);
-          map.removeInteraction(draw1);
         });
-
-        draw.on(
-          "drawend",
-          function (evt) {
-            map.removeInteraction(draw);
-          },
-          this
-        );
       };
 
       /**
@@ -641,33 +616,45 @@ let app = new Vue({
 
       var roundResult;
 
-      map.on("singleclick", function (evt) {
-        if (isDrawed) {
-          map.removeLayer(roundResult);
-          const selectedX = ol.proj.transform(evt.coordinate, "EPSG:3857", "EPSG:4326")[0];
-          const selectedY = ol.proj.transform(evt.coordinate, "EPSG:3857", "EPSG:4326")[1];
-          var params = {
-            LAYERS: 'hanoi_round',
-            FORMAT: 'image/png'
-          };
-          var viewparams = [
-            'x1:' + mapLng, 'y1:' + mapLat,
-            'x2:' + selectedX, 'y2:' + selectedY
-          ];
-          params.viewparams = viewparams.join(';');
-          roundResult = new ol.layer.Image({
-            source: new ol.source.ImageWMS({
-              url: 'http://localhost:8080/geoserver/demo/wms',
-              params: params
-            })
-          });
+      // map.on("singleclick", function (evt) {
+      //   // map.removeLayer(roundResult);
+      //   const selectedX = ol.proj.transform(
+      //     evt.coordinate,
+      //     "EPSG:3857",
+      //     "EPSG:4326"
+      //   )[0];
+      //   const selectedY = ol.proj.transform(
+      //     evt.coordinate,
+      //     "EPSG:3857",
+      //     "EPSG:4326"
+      //   )[1];
+      //   var params = {
+      //     LAYERS: "hanoi_round",
+      //     FORMAT: "image/png",
+      //   };
+      //   var viewparams = [
+      //     "x1:" + mapLng,
+      //     "y1:" + mapLat,
+      //     "x2:" + selectedX,
+      //     "y2:" + selectedY,
+      //   ];
+      //   params.viewparams = viewparams.join(";");
+      //   roundResult = new ol.layer.Image({
+      //     source: new ol.source.ImageWMS({
+      //       url: "http://localhost:8080/geoserver/project.cuoi.ki/wms",
+      //       params: params,
+      //     }),
+      //   });
 
-          map.addLayer(roundResult);
-          console.log(ol.proj.transform(evt.coordinate, "EPSG:3857", "EPSG:4326")[0]);
-          console.log(ol.proj.transform(evt.coordinate, "EPSG:3857", "EPSG:4326")[1]);
-        }
-      });
-
+      //   map.addLayer(roundResult);
+        
+      //   console.log(
+      //     ol.proj.transform(evt.coordinate, "EPSG:3857", "EPSG:4326")[0]
+      //   );
+      //   console.log(
+      //     ol.proj.transform(evt.coordinate, "EPSG:3857", "EPSG:4326")[1]
+      //   );
+      // });
     },
   },
   mounted() {
@@ -680,11 +667,11 @@ let app = new Vue({
       (pos) => {
         mapLat = pos.coords.latitude;
         mapLng = pos.coords.longitude;
-        isLocatePermission = true
+        isLocatePermission = true;
         this.initMap();
       },
       () => {
-        isLocatePermission = false
+        isLocatePermission = false;
         this.initMap();
       }
     );

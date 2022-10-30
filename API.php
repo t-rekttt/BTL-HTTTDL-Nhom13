@@ -155,7 +155,7 @@ function getPointOfInterestTypes($paPDO)
 
 function queryZones($paPDO, $centerLat, $centerLong)
 {
-  $mySQLStatement = $paPDO->prepare('SELECT name_1, type_2, name_2, gid, ST_AsGeoJson(geom) as geo FROM public.gadm41_vnm_2 WHERE ST_Intersects(ST_SetSRID(ST_MakePoint(:centerLat, :centerLong), 4326), geom)');
+  $mySQLStatement = $paPDO->prepare('SELECT name_1, type_2, name_2, gid, ST_AsGeoJson(geom) as geo FROM public.gadm41_vnm_2 WHERE ST_Intersects(ST_SetSRID(ST_MakePoint(:centerLat, :centerLong), 4326), ST_SetSRID(geom, 4326))');
   $mySQLStatement->execute(['centerLat' => $centerLat, 'centerLong' => $centerLong]);
 
   return json_encode(getResult($mySQLStatement));
