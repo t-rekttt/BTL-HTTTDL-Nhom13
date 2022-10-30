@@ -29,6 +29,7 @@ let app = new Vue({
   data: {
     poisTypes: [],
     limitType: "point",
+    findType: "places",
     poisType: "all",
     vectorSource: null,
     vectorSourceZone: null,
@@ -44,6 +45,8 @@ let app = new Vue({
     zoneData: [],
     errMessage: "",
     zoneHandleClick: function () {},
+    shortestPathHandleClick: function () {},
+    roadResult: null,
   },
   methods: {
     post(data) {
@@ -142,6 +145,7 @@ let app = new Vue({
           source: highlightZoneVectorSource,
         });
         searchResultLayer.setZIndex(10);
+        searchResultLayer.setOpacity(0.3);
 
         this.searchResultLayer = searchResultLayer;
         this.map.addLayer(searchResultLayer);
@@ -178,7 +182,9 @@ let app = new Vue({
       this.gids = [];
       this.zoneData = [];
       this.errMessage = "";
+      this.roadResult = null;
       this.zoneHandleClick = function () {};
+      this.shortestPathHandleClick = function () {};
 
       let layerBackgroundMap = new ol.layer.Tile({
         source: new ol.source.OSM(),
@@ -228,7 +234,7 @@ let app = new Vue({
       });
 
       layerGadm41_vnm_2.setZIndex(1);
-      layerGadm41_vnm_2.setOpacity(0.5);
+      layerGadm41_vnm_2.setOpacity(0.3);
 
       // let layerGis_osm_pois_free_1 = new ol.layer.Image({
       //   source: new ol.source.ImageWMS({
@@ -258,6 +264,21 @@ let app = new Vue({
       // layerGis_osm_roads_free_1.setZIndex(2);
       // layerGadm41_vnm_2.setOpacity(0.5);
 
+      // let layerGis_hanoi_round = new ol.layer.Image({
+      //   source: new ol.source.ImageWMS({
+      //     ratio: 1,
+      //     url: "http://localhost:8080/geoserver/wms?",
+      //     params: {
+      //       FORMAT: format,
+      //       VERSION: "1.1.1",
+      //       STYLES: "",
+      //       LAYERS: "project.cuoi.ki:hanoi_round",
+      //     },
+      //   }),
+      // });
+      // layerGis_hanoi_round.setZIndex(2);
+      // layerGis_hanoi_round.setOpacity(0.5);
+
       const view = new ol.View({
         center: ol.proj.fromLonLat([mapLng, mapLat]),
         zoom: mapDefaultZoom,
@@ -268,6 +289,7 @@ let app = new Vue({
         layers: [
           layerBackgroundMap,
           layerGadm41_vnm_2,
+          // layerGis_hanoi_round,
           // layerGis_osm_roads_free_1,
           // layerGis_osm_pois_free_1,
           vectorLayerRadius,
@@ -279,31 +301,29 @@ let app = new Vue({
       this.map = map;
 
       // Add current locate to layer
-      if (isLocatePermission) {
-        const positionFeature = new ol.Feature({
-          geometry: new ol.geom.Point(
-            ol.proj.transform([mapLng, mapLat], "EPSG:4326", "EPSG:3857")
-          ),
-        });
+      const positionFeature = new ol.Feature({
+        geometry: new ol.geom.Point(
+          ol.proj.transform([mapLng, mapLat], "EPSG:4326", "EPSG:3857")
+        ),
+      });
 
-        positionFeature.setStyle(
-          new ol.style.Style({
-            image: new ol.style.Icon({
-              anchor: [0.5, 46],
-              anchorXUnits: "fraction",
-              anchorYUnits: "pixels",
-              src: "assets/icon/home_pin_FILL0_wght400_GRAD0_opsz48.png",
-            }),
-          })
-        );
-
-        new ol.layer.Vector({
-          map: map,
-          source: new ol.source.Vector({
-            features: [positionFeature],
+      positionFeature.setStyle(
+        new ol.style.Style({
+          image: new ol.style.Icon({
+            anchor: [0.5, 46],
+            anchorXUnits: "fraction",
+            anchorYUnits: "pixels",
+            src: "assets/icon/home_pin_FILL0_wght400_GRAD0_opsz48.png",
           }),
-        });
-      }
+        })
+      );
+
+      new ol.layer.Vector({
+        map: map,
+        source: new ol.source.Vector({
+          features: [positionFeature],
+        }),
+      });
 
       function highLightGeoJsonObj(coordinate) {
         let iconFeature = new ol.Feature({
@@ -574,6 +594,51 @@ let app = new Vue({
           createMeasureTooltip();
           ol.Observable.unByKey(listener);
         });
+
+        shortestPathHandleClick = async (evt) => {
+          const selectedX = ol.proj.transform(
+            evt.coordinate,
+            "EPSG:3857",
+            "EPSG:4326"
+          )[0];
+          const selectedY = ol.proj.transform(
+            evt.coordinate,
+            "EPSG:3857",
+            "EPSG:4326"
+          )[1];
+          var params = {
+            LAYERS: "hanoi_round",
+            FORMAT: "image/png",
+          };
+          var viewparams = [
+            "x1:" + mapLng,
+            "y1:" + mapLat,
+            "x2:" + selectedX,
+            "y2:" + selectedY,
+          ];
+          params.viewparams = viewparams.join(";");
+
+          if (this.roadResult) map.removeLayer(this.roadResult);
+
+          this.roadResult = new ol.layer.Image({
+            source: new ol.source.ImageWMS({
+              url: "http://localhost:8080/geoserver/project.cuoi.ki/wms",
+              params: params,
+            }),
+          });
+          this.roadResult.setZIndex(11);
+
+          map.addLayer(this.roadResult);
+
+          console.log(
+            ol.proj.transform(evt.coordinate, "EPSG:3857", "EPSG:4326")[0]
+          );
+          console.log(
+            ol.proj.transform(evt.coordinate, "EPSG:3857", "EPSG:4326")[1]
+          );
+        };
+
+        this.shortestPathHandleClick = shortestPathHandleClick;
       };
 
       /**
@@ -613,48 +678,6 @@ let app = new Vue({
       }
 
       addInteraction();
-
-      var roundResult;
-
-      // map.on("singleclick", function (evt) {
-      //   // map.removeLayer(roundResult);
-      //   const selectedX = ol.proj.transform(
-      //     evt.coordinate,
-      //     "EPSG:3857",
-      //     "EPSG:4326"
-      //   )[0];
-      //   const selectedY = ol.proj.transform(
-      //     evt.coordinate,
-      //     "EPSG:3857",
-      //     "EPSG:4326"
-      //   )[1];
-      //   var params = {
-      //     LAYERS: "hanoi_round",
-      //     FORMAT: "image/png",
-      //   };
-      //   var viewparams = [
-      //     "x1:" + mapLng,
-      //     "y1:" + mapLat,
-      //     "x2:" + selectedX,
-      //     "y2:" + selectedY,
-      //   ];
-      //   params.viewparams = viewparams.join(";");
-      //   roundResult = new ol.layer.Image({
-      //     source: new ol.source.ImageWMS({
-      //       url: "http://localhost:8080/geoserver/project.cuoi.ki/wms",
-      //       params: params,
-      //     }),
-      //   });
-
-      //   map.addLayer(roundResult);
-        
-      //   console.log(
-      //     ol.proj.transform(evt.coordinate, "EPSG:3857", "EPSG:4326")[0]
-      //   );
-      //   console.log(
-      //     ol.proj.transform(evt.coordinate, "EPSG:3857", "EPSG:4326")[1]
-      //   );
-      // });
     },
   },
   mounted() {
@@ -682,13 +705,25 @@ let app = new Vue({
   },
   watch: {
     limitType(val) {
-      if (val == "zone") {
+      if (val === "zone") {
         console.log("Zone set!");
         this.map.addEventListener("singleclick", this.zoneHandleClick);
         for (let draw of this.drawRadius) this.map.removeInteraction(draw);
-      } else if (val == "point") {
+      } else if (val === "point") {
         this.map.removeEventListener("singleclick", this.zoneHandleClick);
         for (let draw of this.drawRadius) this.map.addInteraction(draw);
+      }
+    },
+    findType(val) {
+      if (val === "places") {
+        this.map.removeEventListener("singleclick", shortestPathHandleClick);
+        if (this.limitType === "zone")
+          this.map.addEventListener("singleclick", this.zoneHandleClick);
+        else for (let draw of this.drawRadius) this.map.addInteraction(draw);
+      } else if (val === "shortestPath") {
+        this.map.addEventListener("singleclick", shortestPathHandleClick);
+        this.map.removeEventListener("singleclick", this.zoneHandleClick);
+        for (let draw of this.drawRadius) this.map.removeInteraction(draw);
       }
     },
   },
