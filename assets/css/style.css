@@ -42,3 +42,7 @@
 .ol-tooltip-static:before {
   border-top-color: #ffcc33;
 }
+
+#configCard {
+  height: 98vh;
+}

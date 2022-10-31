@@ -24,6 +24,8 @@ var isLocatePermission = false;
 // Highlight layer
 var highlightZoneLayer;
 
+const BASE_URL = window.location.origin;
+
 let app = new Vue({
   el: "#main",
   data: {
@@ -223,7 +225,7 @@ let app = new Vue({
       let layerGadm41_vnm_2 = new ol.layer.Image({
         source: new ol.source.ImageWMS({
           ratio: 1,
-          url: "http://localhost:8080/geoserver/wms?",
+          url: `${BASE_URL}:8080/geoserver/wms?`,
           params: {
             FORMAT: format,
             VERSION: "1.1.1",
@@ -239,7 +241,7 @@ let app = new Vue({
       // let layerGis_osm_pois_free_1 = new ol.layer.Image({
       //   source: new ol.source.ImageWMS({
       //     ratio: 1,
-      //     url: "http://localhost:8080/geoserver/wms?",
+      //     url: `${BASE_URL}:8080/geoserver/wms?`,
       //     params: {
       //       FORMAT: format,
       //       VERSION: "1.1.1",
@@ -252,7 +254,7 @@ let app = new Vue({
       // let layerGis_osm_roads_free_1 = new ol.layer.Image({
       //   source: new ol.source.ImageWMS({
       //     ratio: 1,
-      //     url: "http://localhost:8080/geoserver/wms?",
+      //     url: `${BASE_URL}:8080/geoserver/wms?`,
       //     params: {
       //       FORMAT: format,
       //       VERSION: "1.1.1",
@@ -267,7 +269,7 @@ let app = new Vue({
       // let layerGis_hanoi_round = new ol.layer.Image({
       //   source: new ol.source.ImageWMS({
       //     ratio: 1,
-      //     url: "http://localhost:8080/geoserver/wms?",
+      //     url: `${BASE_URL}:8080/geoserver/wms?`,
       //     params: {
       //       FORMAT: format,
       //       VERSION: "1.1.1",
@@ -466,39 +468,39 @@ let app = new Vue({
             "EPSG:4326"
           );
           let data = await this.queryZones(lonlat[0], lonlat[1]);
-          // console.log(data);
-          for (let item of data) {
-            this.gids.push(item.gid);
-            this.zoneData.push(item);
-          }
 
           let markers = [];
-
+          
           // console.log(data);
           for (let item of data) {
-            let geo = JSON.parse(item.geo);
+            if (!this.gids.includes(item.gid)) {
+              this.gids.push(item.gid);
+              this.zoneData.push(item);
 
-            markers.push(
-              new ol.Feature(
-                new ol.geom.MultiPolygon(
-                  geo.coordinates.map((polygon) => {
-                    return new ol.geom.Polygon(
-                      polygon.map((coors) => {
-                        // console.log(coors);
+              let geo = JSON.parse(item.geo);
 
-                        return coors.map((coor) => {
-                          return ol.proj.transform(
-                            coor,
-                            "EPSG:4326",
-                            "EPSG:3857"
-                          );
-                        });
-                      })
-                    );
-                  })
+              markers.push(
+                new ol.Feature(
+                  new ol.geom.MultiPolygon(
+                    geo.coordinates.map((polygon) => {
+                      return new ol.geom.Polygon(
+                        polygon.map((coors) => {
+                          // console.log(coors);
+
+                          return coors.map((coor) => {
+                            return ol.proj.transform(
+                              coor,
+                              "EPSG:4326",
+                              "EPSG:3857"
+                            );
+                          });
+                        })
+                      );
+                    })
+                  )
                 )
-              )
-            );
+              );
+            }
           }
 
           // console.log(markers);
@@ -622,7 +624,7 @@ let app = new Vue({
 
           this.roadResult = new ol.layer.Image({
             source: new ol.source.ImageWMS({
-              url: "http://localhost:8080/geoserver/project.cuoi.ki/wms",
+              url: `${BASE_URL}:8080/geoserver/project.cuoi.ki/wms`,
               params: params,
             }),
           });
