@@ -45,7 +45,7 @@ header("Pragma: no-cache");
               <div class=" col">
                 <div class="mb-3">
                   <label class="form-label">
-                    Chọn giới hạn vùng tìm kiếm
+                    Chọn giới hạn tìm kiếm
                   </label>
                   <select class="form-select" v-model="limitType" :disabled="findType !== 'places'">
                     <option value="point">Giới hạn bằng khoảng cách</option>
