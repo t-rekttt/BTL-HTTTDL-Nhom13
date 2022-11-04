@@ -32,6 +32,7 @@ Tài liệu hoạt động nhóm: https://vietthao2000.notion.site/BTL-HTTT-
 3. Chọn đường đi ngắn nhất
    
 # III. Hướng dẫn sử dụng
+- Tải mã nguồn tại: https://github.com/t-rekttt/BTL-HTTTDL-Nhom13/archive/refs/heads/main.zip
 ## III.1. Import và khởi tạo dữ liệu tìm đường đi ngắn nhất
 1. Import 3 shapefile sau vào database bằng PostGIS:
 - gadm41_VNM_2.shp: Dữ liệu địa giới hành chính Việt Nam
