@@ -2,7 +2,7 @@
 Mã nguồn BTL môn HTTT Địa Lý - Nhóm 13 - ĐH Thuỷ Lợi
 
 # Hướng dẫn sử dụng
-## Import và tạo dữ liệu tìm đường đi ngắn nhất
+## I. Import và khởi tạo dữ liệu tìm đường đi ngắn nhất
 1. Import 3 shapefile sau vào database bằng PostGIS:
 - gadm41_VNM_2.shp: Dữ liệu địa giới hành chính Việt Nam
 - gis_osm_pois_free_1.shp: Dữ liệu địa điểm (point of interests) Việt Nam, phục vụ cho việc tìm địa điểm
@@ -77,3 +77,40 @@ WITH
 $BODY$
 LANGUAGE 'sql';
 ```
+3. Vào GeoServer dashboard. Chọn Layers -> Add a new layer -> Chọn workspace tương ứng -> Configure new SQL view...
+
+![image](https://user-images.githubusercontent.com/9071846/199900129-d480aacb-b82b-4adc-b4cf-2da5a0d68dd1.png)
+
+4. Điền
+``` SQL
+SELECT (route.geom) FROM 
+    (SELECT geom FROM pgr_fromAtoB('hanoi_round', %x1%, %y1%, %x2%, %y2%) ORDER BY seq)
+AS route
+```
+
+5. Chọn Guess parameters from SQL, nhập Default value = 0 và Validation regular expression = `^-?[\d.]+$`
+
+![image](https://user-images.githubusercontent.com/9071846/199900600-bcbaf5ce-024f-43aa-b680-5f7f93c065bf.png)
+
+6. Trong phần Attributes, ấn Refresh, trong Type chọn LineString, SRID chọn hệ tọa độ của data, ở đây là 4326.
+
+![image](https://user-images.githubusercontent.com/9071846/199900893-2abef203-47ba-4a87-9f15-92c71709a350.png)
+
+7. Nhấn Save. Tiếp theo chúng ta điền các thông tin khác cho layer. Bạn có thể không cần điền thêm gì, chỉ cần ấn Compute from data và Compute from native bounds để tạo bộ khung cho layer.
+
+![image](https://user-images.githubusercontent.com/9071846/199901095-4a654e8a-2da4-4a05-bbcb-6afa532994e3.png)
+
+## II. Config XAMPP server
+1. Copy thư mục src vào htdocs trong XAMPP server, đổi thành tên tuỳ ý
+2. Copy file `constant.php.example` thành `constant.php`, sửa `TABLENAME` và `PASSWORD` tương ứng với database mà bạn vừa import shapefiles vào.
+
+![image](https://user-images.githubusercontent.com/9071846/199902463-4a97fd3e-cc63-43d4-ba6d-919e56068b59.png)
+
+3. Start XAMPP server
+
+![image](https://user-images.githubusercontent.com/9071846/199903082-b934397e-db4a-4493-a955-cf7e47e2958e.png)
+
+## III. Truy cập ứng dụng
+- Truy cập ứng dụng bằng đường dẫn http
+
+![image](https://user-images.githubusercontent.com/9071846/199903194-ecf37798-62b0-4567-a3a8-26d385e92f54.png)
