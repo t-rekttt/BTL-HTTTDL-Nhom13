@@ -1,5 +1,6 @@
 # BTL-HTTDL-Nhom13
 Mã nguồn BTL môn HTTT Địa Lý - Nhóm 13 - ĐH Thuỷ Lợi
+Tài liệu họp nhóm: https://vietthao2000.notion.site/BTL-HTTT-a-L-Nh-m-13-0971c386d2d14e59a49c9b4af6dec33b
 
 # I. Công nghệ sử dụng
 - **Frontend**:
