@@ -1,8 +1,34 @@
 # BTL-HTTDL-Nhom13
 Mã nguồn BTL môn HTTT Địa Lý - Nhóm 13 - ĐH Thuỷ Lợi
 
-# Hướng dẫn sử dụng
-## I. Import và khởi tạo dữ liệu tìm đường đi ngắn nhất
+# I. Công nghệ sử dụng
+- **Frontend**:
+    - HTML, CSS, JS
+    - Vue.JS: https://v2.vuejs.org/
+    - WebGIS: [https://ungdungmoi.edu.vn/webgis-la-gi.html](https://ungdungmoi.edu.vn/webgis-la-gi.html)
+- **Backend**: PHP, GeoServer
+- **Database**: PostgreSQL
+- **Thư viện/extensions cho GIS**:
+    - OpenLayers: [https://openlayers.org/](https://openlayers.org/)
+    - PostGIS: [https://postgis.net/](https://postgis.net/)
+    - PGRouting: [https://pgrouting.org/](https://pgrouting.org/)
+
+# II. Mô tả tính năng:
+
+## II.1. Tìm kiếm địa điểm:
+
+1. Người dùng chọn vị trí A, bán kính tìm kiếm R, vùng tìm kiếm và loại địa điểm
+2. Query các địa điểm thoả mãn nằm trong bán kính R và trong vùng tìm kiếm (nếu người dùng không chọn vùng tìm kiếm thì tìm kiếm trên mọi vùng)
+3. Hiển thị kết quả lên bản đồ
+
+## II.2. Tìm đường đi ngắn nhất:
+
+1. Người dùng click chọn một địa điểm B trong tập những điểm đã hiển thị ở bước trên
+2. Query tập các con đường đi từ A đến B, sort theo độ dài
+3. Chọn đường đi ngắn nhất
+   
+# III. Hướng dẫn sử dụng
+## III.1. Import và khởi tạo dữ liệu tìm đường đi ngắn nhất
 1. Import 3 shapefile sau vào database bằng PostGIS:
 - gadm41_VNM_2.shp: Dữ liệu địa giới hành chính Việt Nam
 - gis_osm_pois_free_1.shp: Dữ liệu địa điểm (point of interests) Việt Nam, phục vụ cho việc tìm địa điểm
@@ -100,7 +126,7 @@ AS route
 
 ![image](https://user-images.githubusercontent.com/9071846/199901095-4a654e8a-2da4-4a05-bbcb-6afa532994e3.png)
 
-## II. Config XAMPP server
+## III.2. Config XAMPP server
 1. Copy thư mục src vào htdocs trong XAMPP server, đổi thành tên tuỳ ý
 2. Copy file `constant.php.example` thành `constant.php`, sửa `TABLENAME` và `PASSWORD` tương ứng với database mà bạn vừa import shapefiles vào.
 
@@ -110,7 +136,7 @@ AS route
 
 ![image](https://user-images.githubusercontent.com/9071846/199903082-b934397e-db4a-4493-a955-cf7e47e2958e.png)
 
-## III. Truy cập ứng dụng
+## III.3. Truy cập ứng dụng
 - Truy cập ứng dụng bằng đường dẫn http
 
 ![image](https://user-images.githubusercontent.com/9071846/199903194-ecf37798-62b0-4567-a3a8-26d385e92f54.png)
