@@ -1,3 +1,0 @@
-<?php
-define("TABLENAME", "<YOUR-TABLE-NAME-HERE>");
-define("PASSWORD", "<YOUR-PASSWORD-HERE>");
